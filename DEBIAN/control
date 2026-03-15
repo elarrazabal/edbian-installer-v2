@@ -1,0 +1,10 @@
+Package: edbian-installer
+Version: 2.0.3
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-pyqt5, wget, apt, dpkg
+Maintainer: Eduardo de Larrazabal <elarrazabal@gmail.com>
+Description: Instalador gráfico para paquetes recomendados de Edbian
+ Este instalador permite seleccionar perfiles y paquetes, y realiza
+ la instalación usando pkexec con barra de progreso y log.

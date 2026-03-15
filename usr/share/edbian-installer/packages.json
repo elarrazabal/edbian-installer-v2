@@ -1,0 +1,53 @@
+{
+  "Utilidades": {
+    "gdebi": "Instalador gráfico de paquetes .deb",
+    "synapse": "Buscador de aplicaciones",
+    "gparted": "Utilidad de particionado de discos",
+    "gedit": "Editor simple de textos",
+    "deja-dup": "Copias de seguridad",
+    "grub-customizer": "Personalizador de GRUB"
+  },
+
+  "Graficos": {
+    "krita": "Pintura digital",
+    "blender": "Modelado 3D",
+    "inkscape": "Editor vectorial",
+    "gimp": "Edición de imágenes",
+    "radeontop": "Monitor GPU AMD"
+  },
+
+  "Paqueteria": {
+    "flatpak": "Gestor de paquetes Flatpak",
+    "snapd": "Gestor de paquetes Snap"
+  },
+
+  "Video": {
+    "kdenlive": "Editor de video",
+    "vokoscreen": "Captura de escritorio",
+    "cheese": "Captura webcam",
+    "obs-studio": "Streaming y grabación"
+  },
+
+  "Multimedia": {
+    "kodi": "Centro multimedia",
+    "vlc": "Reproductor multimedia"
+  },
+
+  "Internet": {
+    "transmission": "Cliente torrent"
+  },
+
+  "Audio": {
+    "qjackctl": "Control del servidor JACK",
+    "ardour": "Producción audio",
+    "hydrogen": "Drum machine",
+    "musescore3": "Editor de partituras",
+    "audacious": "Reproductor de música",
+    "audacity": "Editor de audio",
+    "lmms": "Producción musical",
+    "guitarix": "Amplificador guitarra",
+    "rakarrack": "Efectos guitarra",
+    "qpwgraph": "Gestor de conexiones audio",
+    "kxstudio-repos": "Repositorio de plugins y utilidades de audio"
+  }
+}

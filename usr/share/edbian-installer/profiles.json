@@ -1,0 +1,43 @@
+{
+  "Basico": [
+    "gdebi",
+    "synapse",
+    "gparted",
+    "gedit"
+  ],
+
+  "Multimedia": [
+    "vlc",
+    "kodi",
+    "obs-studio",
+    "kdenlive"
+  ],
+
+  "Audio": [
+    "ardour",
+    "audacity",
+    "lmms",
+    "hydrogen",
+    "qjackctl"
+  ],
+
+  "Completo": [
+    "gdebi",
+    "synapse",
+    "gparted",
+    "gedit",
+    "krita",
+    "blender",
+    "inkscape",
+    "gimp",
+    "vlc",
+    "kodi",
+    "obs-studio",
+    "kdenlive",
+    "ardour",
+    "audacity",
+    "lmms",
+    "hydrogen",
+    "qjackctl"
+  ]
+}

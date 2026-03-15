@@ -1,0 +1,3 @@
+#!/bin/bash
+# Actualizar iconos o registrar launcher
+update-desktop-database
