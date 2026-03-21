@@ -1,0 +1,54 @@
+name: Build & Release Edbian Installer v2 .deb
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # 🔥 ESTO ES LA CLAVE
+
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y dpkg-dev fakeroot curl jq
+
+    - name: Determine version
+      run: |
+        VERSION=$(echo ${GITHUB_REF_NAME} | sed 's/^v//')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Building version: $VERSION"
+
+    - name: Update DEBIAN/control version
+      run: |
+        sed -i "s/^Version:.*/Version: $VERSION/" DEBIAN/control
+        cat DEBIAN/control
+
+    - name: Build .deb
+      run: |
+        dpkg-deb --build . edbian-installer-v2.deb
+        mv edbian-installer-v2.deb edbian-installer-v2-$VERSION.deb
+
+    - name: Create Release & Upload Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ env.VERSION }}
+        name: v${{ env.VERSION }}
+        files: edbian-installer-v2-${{ env.VERSION }}.deb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifact (Actions)
+      uses: actions/upload-artifact@v4
+      with:
+        name: edbian-installer-v2-deb
+        path: edbian-installer-v2-$VERSION.deb
