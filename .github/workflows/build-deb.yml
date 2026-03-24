@@ -37,7 +37,7 @@ jobs:
       run: |
         mkdir pkg
         rsync -a --exclude='.git' --exclude='.github' --exclude='intrucciones' --exclude='README*' ./ pkg/
-        dpkg-deb --build pkg edbian-branding.deb
+        dpkg-deb --build pkg edbian-installer-v2.deb
         mv edbian-installer-v2.deb edbian-installer-v2-$VERSION.deb
 
     - name: Create Release & Upload Asset
