@@ -3,7 +3,7 @@ import gi, os, json, subprocess, threading, re
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Gtk, Adw, GLib
+from gi.repository import Gtk, Adw, GLib, Gio
 
 BASE_DIR = "/usr/share/edbian-installer"
 
@@ -275,7 +275,10 @@ class Installer(Adw.ApplicationWindow):
 # -----------------------------
 class App(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.edbian.installer")
+        super().__init__(
+            application_id="com.edbian.installer.dev",  # <- ID temporal para desarrollo
+            flags=Gio.ApplicationFlags.FLAGS_NONE     # <- Permite varias instancias
+        )
 
     def do_activate(self):
         win = Installer(self)
