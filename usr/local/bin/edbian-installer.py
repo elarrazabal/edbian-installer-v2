@@ -1,294 +1,254 @@
 #!/usr/bin/env python3
-import sys, json, os
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+import gi, os, json, subprocess, threading, re
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
 
-# -----------------------------
-# Estilo
-# -----------------------------
+from gi.repository import Gtk, Adw, GLib, Gio
+
 BASE_DIR = "/usr/share/edbian-installer"
 
-DARK_STYLE = """
-QWidget { background-color:#2b2b2b; color:white; font-family:Segoe UI; }
-QPushButton{ background:#444; border:1px solid #666; padding:6px; border-radius:6px; }
-QPushButton:hover{ background:#555; }
-QCheckBox::indicator { width:18px; height:18px; border:1px solid #888; background:white; }
-QCheckBox::indicator:checked { background-color:#3daee9; border:1px solid #3daee9; }
-QCheckBox { spacing:8px; color:white; }
-QRadioButton { color:white; }
-QTabWidget::pane{ border:1px solid #444; }
-QTabBar::tab{ background:#3a3a3a; padding:8px; }
-QTabBar::tab:selected{ background:#3daee9; }
-QProgressBar{ border:1px solid #555; border-radius:5px; text-align:center; }
-QProgressBar::chunk{ background:#3daee9; }
-"""
-
 # -----------------------------
-# Sidebar
+# Sidebar Wizard (moderno)
 # -----------------------------
-class Sidebar(QWidget):
+class Sidebar(Adw.PreferencesGroup):
     def __init__(self):
-        super().__init__()
-        layout=QVBoxLayout()
-        logo=QLabel()
-        logo.setPixmap(QPixmap(os.path.join(BASE_DIR,"assets/logo.png")).scaled(120,120,Qt.KeepAspectRatio))
-        logo.setAlignment(Qt.AlignCenter)
-        layout.addWidget(logo)
-        self.labels=[]
-        steps=[("Perfil", os.path.join(BASE_DIR,"assets/sidebar/profile.png")),
-               ("Paquetes", os.path.join(BASE_DIR,"assets/sidebar/packages.png")),
-               ("Instalación", os.path.join(BASE_DIR,"assets/sidebar/install.png"))]
-        for name,icon in steps:
-            row=QHBoxLayout()
-            ic=QLabel()
-            ic.setPixmap(QPixmap(icon).scaled(22,22))
-            txt=QLabel(name)
-            row.addWidget(ic)
-            row.addWidget(txt)
-            w=QWidget()
-            w.setLayout(row)
-            layout.addWidget(w)
-            self.labels.append(txt)
-        layout.addStretch()
-        self.setLayout(layout)
-    def set_step(self,index):
-        for i,l in enumerate(self.labels):
-            if i==index:
-                l.setStyleSheet("color:#3daee9;font-weight:bold")
-            else:
-                l.setStyleSheet("")
+        super().__init__(title="Instalación")
+
+        self.rows = []
+        steps = ["Perfil", "Paquetes", "Instalación"]
+
+        for step in steps:
+            row = Adw.ActionRow(title=step)
+            self.add(row)
+            self.rows.append(row)
+
+    def set_step(self, index):
+        for i, row in enumerate(self.rows):
+            row.set_subtitle("●" if i == index else "")
 
 # -----------------------------
-# Welcome Page
+# Welcome
 # -----------------------------
-class WelcomePage(QWidget):
-    def __init__(self,parent):
-        super().__init__()
-        self.parent=parent
-        self.bg=QLabel(self)
-        self.bg.setPixmap(QPixmap(os.path.join(BASE_DIR,"assets/backgrounds/welcome_background.png")))
-        self.bg.setScaledContents(True)
-        layout=QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignBottom)
-        title=QLabel("Bienvenido al Instalado de paquetes de Edbian")
-        title.setStyleSheet("font-size:34px;font-weight:bold;color:white;")
-        title.setAlignment(Qt.AlignCenter)
-        btn=QPushButton("Comenzar")
-        btn.setStyleSheet("font-size:16px;padding:8px;")
-        btn.clicked.connect(parent.next_page)
-        layout.addWidget(title)
-        layout.addWidget(btn)
-    def resizeEvent(self,event):
-        self.bg.resize(self.size())
+class WelcomePage(Gtk.Box):
+    def __init__(self, parent):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.set_valign(Gtk.Align.CENTER)
+
+        title = Gtk.Label(label="Bienvenido a Edbian")
+        title.add_css_class("title-1")
+
+        btn = Gtk.Button(label="Comenzar")
+        btn.add_css_class("suggested-action")
+        btn.connect("clicked", lambda w: parent.next_page())
+
+        self.append(title)
+        self.append(btn)
 
 # -----------------------------
-# Profile Page
+# Profile
 # -----------------------------
-class ProfilePage(QWidget):
-    def __init__(self,parent):
-        super().__init__()
-        self.parent=parent
-        layout=QVBoxLayout()
-        layout.addWidget(QLabel("Seleccione perfil"))
-        self.radio_group=QButtonGroup()
+class ProfilePage(Gtk.Box):
+    def __init__(self, parent):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.parent = parent
+
+        self.group = []
+
         for profile in parent.profiles:
-            rb=QRadioButton(profile)
-            self.radio_group.addButton(rb)
-            layout.addWidget(rb)
-        self.radio_group.buttons()[0].setChecked(True)
-        hbox=QHBoxLayout()
-        btn_back=QPushButton("Atrás")
-        btn_back.clicked.connect(parent.previous_page)
-        btn_next=QPushButton("Continuar")
-        btn_next.clicked.connect(self.apply_profile)
-        hbox.addWidget(btn_back)
-        hbox.addStretch()
-        hbox.addWidget(btn_next)
-        layout.addLayout(hbox)
-        layout.addStretch()
-        self.setLayout(layout)
+            rb = Gtk.CheckButton(label=profile)
+            rb.set_group(self.group[0] if self.group else None)
+            self.group.append(rb)
+            self.append(rb)
 
-    def apply_profile(self):
-        selected_profile = None
-        for rb in self.radio_group.buttons():
-            if rb.isChecked():
-                selected_profile = rb.text()
-                break
-        profile_packages = self.parent.profiles.get(selected_profile, [])
-        for pkg_name, cb in self.parent.package_page.checkboxes.items():
-            cb.setChecked(pkg_name in profile_packages)
+        btn = Gtk.Button(label="Continuar")
+        btn.connect("clicked", self.apply_profile)
+        self.append(btn)
+
+    def apply_profile(self, w):
+        selected = None
+        for rb in self.group:
+            if rb.get_active():
+                selected = rb.get_label()
+
+        pkgs = self.parent.profiles.get(selected, [])
+
+        for name, cb in self.parent.package_page.checkboxes.items():
+            cb.set_active(name in pkgs)
+
         self.parent.next_page()
 
 # -----------------------------
-# Package Page
+# Package Page (tabs + iconos)
 # -----------------------------
-class PackagePage(QWidget):
-    def __init__(self,parent):
-        super().__init__()
-        self.parent=parent
-        layout=QVBoxLayout()
-        self.tabs=QTabWidget()
-        self.checkboxes={}
-        for category,pkgs in parent.package_data.items():
-            tab=QWidget()
-            v=QVBoxLayout()
-            for pkg,data in pkgs.items():
-                desc = data["desc"] if isinstance(data,dict) else data
-                cb=QCheckBox(f"{pkg} — {desc}")
-                v.addWidget(cb)
-                self.checkboxes[pkg]=cb
-            v.addStretch()
-            tab.setLayout(v)
-            icon=QIcon(f"assets/icons/{category.lower()}.png")
-            self.tabs.addTab(tab,icon,category)
-        layout.addWidget(self.tabs)
-        hbox=QHBoxLayout()
-        btn_back=QPushButton("Atrás")
-        btn_back.clicked.connect(parent.previous_page)
-        btn_next=QPushButton("Continuar")
-        btn_next.clicked.connect(parent.next_page)
-        hbox.addWidget(btn_back)
-        hbox.addStretch()
-        hbox.addWidget(btn_next)
-        layout.addLayout(hbox)
-        self.setLayout(layout)
+class PackagePage(Gtk.Box):
+    def __init__(self, parent):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.parent = parent
 
-# -----------------------------
-# Install Page
-# -----------------------------
-class InstallPage(QWidget):
-    def __init__(self,parent):
-        super().__init__()
-        self.main = parent
-        layout=QVBoxLayout()
-        self.spinner=QLabel()
-        self.movie=QMovie(os.path.join(BASE_DIR,"assets/spinner.gif"))
-        self.movie.setScaledSize(QSize(120,120))
-        self.spinner.setAlignment(Qt.AlignCenter)
-        self.spinner.setMovie(self.movie)
-        layout.addWidget(self.spinner)
+        self.stack = Gtk.Stack()
+        self.switcher = Gtk.StackSwitcher(stack=self.stack)
 
-        self.progress=QProgressBar()
-        layout.addWidget(self.progress)
+        self.checkboxes = {}
 
-        self.log=QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setVisible(False)
-        layout.addWidget(self.log)
+        for category, pkgs in parent.package_data.items():
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
-        hbox_toggle=QHBoxLayout()
-        self.toggle_btn=QPushButton("Mostrar log")
-        self.toggle_btn.clicked.connect(self.toggle_log)
-        hbox_toggle.addWidget(self.toggle_btn)
-        hbox_toggle.addStretch()
-        layout.addLayout(hbox_toggle)
+            for pkg, data in pkgs.items():
+                desc = data["desc"] if isinstance(data, dict) else data
+                cb = Gtk.CheckButton(label=f"{pkg} — {desc}")
+                box.append(cb)
+                self.checkboxes[pkg] = cb
 
-        hbox_buttons=QHBoxLayout()
-        self.install_btn=QPushButton("Comenzar instalación")
-        self.install_btn.clicked.connect(self.install)
-        self.close_btn=QPushButton("Cerrar")
-        self.close_btn.clicked.connect(parent.close)
-        hbox_buttons.addWidget(self.install_btn)
-        hbox_buttons.addStretch()
-        hbox_buttons.addWidget(self.close_btn)
-        layout.addLayout(hbox_buttons)
+            icon = Gtk.Image.new_from_file(
+                os.path.join(BASE_DIR, f"assets/icons/{category.lower()}.png")
+            )
 
-        self.setLayout(layout)
-        self.process=None
+            header = Gtk.Box(spacing=6)
+            header.append(icon)
+            header.append(Gtk.Label(label=category))
 
-    def toggle_log(self):
-        self.log.setVisible(not self.log.isVisible())
+            self.stack.add_titled(box, category, category)
 
-    def install(self):
-        self.install_btn.setEnabled(False)
-        self.movie.start()
-        pkgs=[]
-        for cb in self.main.package_page.checkboxes.values():
-            if cb.isChecked():
-                pkgs.append(cb.text().split(" — ")[0])
+        self.append(self.switcher)
+        self.append(self.stack)
 
-        # Repositorio KXStudio
-        if "kxstudio-repos" in pkgs:
-            pkgs.remove("kxstudio-repos")
-            self.log.append("Instalando repositorio KXStudio...\n")
-            process_kx = QProcess()
-            process_kx.start("bash", ["-c",
-                "wget -q https://launchpad.net/~kxstudio-debian/+archive/kxstudio/+files/kxstudio-repos_11.2.0_all.deb && pkexec dpkg -i kxstudio-repos_11.2.0_all.deb"])
-            process_kx.waitForFinished()
-            self.log.append("Repositorio KXStudio instalado\n")
-
-        if pkgs:
-            self.log.append(f"Instalando paquetes: {' '.join(pkgs)}\n")
-            self.process = QProcess()
-            self.process.setProcessChannelMode(QProcess.MergedChannels)
-            self.process.readyReadStandardOutput.connect(lambda: self.read_output())
-            self.process.finished.connect(lambda code,status: self.finished(code))
-            cmd = f"pkexec apt install -y {' '.join(pkgs)}"
-            self.process.start("bash", ["-c", cmd])
-        else:
-            self.finished(0)
-
-    def read_output(self):
-        if self.process:
-            text = self.process.readAllStandardOutput().data().decode()
-            self.log.append(text)
-
-    def finished(self, code):
-        self.movie.stop()
-        self.install_btn.setEnabled(True)
-        msg = "Instalación completada ✔" if code==0 else "Error durante la instalación ✖"
-        reply=QMessageBox()
-        reply.setWindowTitle("Resultado")
-        reply.setText(msg)
-        reply.setStandardButtons(QMessageBox.Ok)
-        reply.exec_()
-        if code==0:
-            self.main.close()
+        btn = Gtk.Button(label="Continuar")
+        btn.connect("clicked", lambda w: parent.next_page())
+        self.append(btn)
 
 # -----------------------------
-# Main Installer
+# Install Page (PROGRESS REAL)
 # -----------------------------
-class Installer(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.resize(1200,700)
+class InstallPage(Gtk.Box):
+    def __init__(self, parent):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.parent = parent
+
+        self.progress = Gtk.ProgressBar()
+        self.append(self.progress)
+
+        self.log = Gtk.TextView(editable=False)
+        self.log.set_visible(False)
+        self.append(self.log)
+
+        toggle = Gtk.Button(label="Mostrar log")
+        toggle.connect("clicked", self.toggle_log)
+        self.append(toggle)
+
+        btn = Gtk.Button(label="Instalar")
+        btn.add_css_class("suggested-action")
+        btn.connect("clicked", self.install)
+        self.append(btn)
+
+    def toggle_log(self, w):
+        self.log.set_visible(not self.log.get_visible())
+
+    def append_log(self, text):
+        buf = self.log.get_buffer()
+        buf.insert(buf.get_end_iter(), text)
+
+    def update_progress(self, line):
+        # Parse típico de apt
+        match = re.search(r"(\d+)%", line)
+        if match:
+            value = int(match.group(1)) / 100
+            self.progress.set_fraction(value)
+
+    def install(self, w):
+        pkgs = [
+            cb.get_label().split(" — ")[0]
+            for cb in self.parent.package_page.checkboxes.values()
+            if cb.get_active()
+        ]
+
+        def run():
+            if not pkgs:
+                GLib.idle_add(self.done, 0)
+                return
+
+            cmd = ["pkexec", "apt", "install", "-y"] + pkgs
+
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            for line in proc.stdout:
+                GLib.idle_add(self.append_log, line)
+                GLib.idle_add(self.update_progress, line)
+
+            proc.wait()
+            GLib.idle_add(self.done, proc.returncode)
+
+        threading.Thread(target=run).start()
+
+    def done(self, code):
+        dialog = Adw.MessageDialog(
+            transient_for=self.get_root(),
+            heading="Resultado",
+            body="Instalación completada ✔" if code == 0 else "Error ❌"
+        )
+        dialog.add_response("ok", "OK")
+        dialog.present()
+
+        if code == 0:
+            self.parent.close()
+
+# -----------------------------
+# Main Window (Wizard real)
+# -----------------------------
+class Installer(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app)
+        self.set_default_size(1200, 700)
+
         with open(os.path.join(BASE_DIR, "packages.json")) as f:
-            self.package_data=json.load(f)
+            self.package_data = json.load(f)
+
         with open(os.path.join(BASE_DIR, "profiles.json")) as f:
-            self.profiles=json.load(f)
-        layout=QHBoxLayout()
-        self.sidebar=Sidebar()
-        layout.addWidget(self.sidebar,1)
-        self.stack=QStackedWidget()
-        layout.addWidget(self.stack,4)
-        self.setLayout(layout)
-        self.welcome=WelcomePage(self)
-        self.profile=ProfilePage(self)
-        self.package_page=PackagePage(self)
-        self.install_page=InstallPage(self)
-        self.stack.addWidget(self.welcome)
-        self.stack.addWidget(self.profile)
-        self.stack.addWidget(self.package_page)
-        self.stack.addWidget(self.install_page)
+            self.profiles = json.load(f)
+
+        main = Gtk.Box()
+
+        self.sidebar = Sidebar()
+        main.append(self.sidebar)
+
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        main.append(self.stack)
+
+        self.set_content(main)
+
+        self.pages = [
+            WelcomePage(self),
+            ProfilePage(self),
+            PackagePage(self),
+            InstallPage(self)
+        ]
+
+        for i, page in enumerate(self.pages):
+            self.stack.add_named(page, str(i))
+
+        self.current = 0
+        self.stack.set_visible_child_name("0")
 
     def next_page(self):
-        i=self.stack.currentIndex()+1
-        self.stack.setCurrentIndex(i)
-        self.sidebar.set_step(i-1)
-
-    def previous_page(self):
-        i=self.stack.currentIndex()-1
-        if i>=0:
-            self.stack.setCurrentIndex(i)
-            self.sidebar.set_step(i-1)
+        self.current += 1
+        self.stack.set_visible_child_name(str(self.current))
+        self.sidebar.set_step(self.current - 1)
 
 # -----------------------------
-# Run
+# App
 # -----------------------------
-app=QApplication(sys.argv)
-app.setStyleSheet(DARK_STYLE)
-window=Installer()
-window.show()
-sys.exit(app.exec())
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="com.edbian.installer")
 
+    def do_activate(self):
+        win = Installer(self)
+        win.present()
+
+app = App()
+app.run()
