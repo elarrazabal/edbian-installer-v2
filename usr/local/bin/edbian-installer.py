@@ -204,6 +204,12 @@ class Installer(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app)
         self.set_default_size(1200, 700)
+        
+        # 👇 IMPORTANTE: HeaderBar con botones
+        header = Adw.HeaderBar()
+        header.set_show_end_title_buttons(True)  # ← aquí aparecen los botones
+
+        self.set_titlebar(header)
 
         with open(os.path.join(BASE_DIR, "packages.json")) as f:
             self.package_data = json.load(f)
