@@ -3,7 +3,7 @@ Version: 2.0.3
 Section: utils
 Priority: optional
 Architecture: all
-Depends: python3, python3-pyqt5, wget, apt, dpkg, python3-gi gir1.2-adw-1 gir1.2-gtk-4.0
+Depends: python3, python3-pyqt5, wget, apt, dpkg, python3-gi, gir1.2-adw-1, gir1.2-gtk-4.0
 Maintainer: Eduardo de Larrazabal <elarrazabal@gmail.com>
 Description: Instalador gráfico para paquetes recomendados de Edbian
  Este instalador permite seleccionar perfiles y paquetes, y realiza
