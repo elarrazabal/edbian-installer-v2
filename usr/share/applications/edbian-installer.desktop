@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Edbian Installer
 Comment=Instalador gráfico de paquetes recomendados
-Exec=edbian-installer.py
+Exec=/usr/local/bin/edbian-installer.py
 Icon=/usr/share/edbian-installer/assets/logo.png
 Terminal=false
 Type=Application
