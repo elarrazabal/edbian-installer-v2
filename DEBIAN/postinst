@@ -1,3 +1,4 @@
 #!/bin/bash
 # Actualizar iconos o registrar launcher
-update-desktop-database
+update-desktop-database /usr/share/applications
+gtk-update-icon-cache
