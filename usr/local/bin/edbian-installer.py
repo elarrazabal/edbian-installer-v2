@@ -329,10 +329,18 @@ class InstallPage(Gtk.Box):
         # LOG
         # -----------------------------
         self.log_buffer = Gtk.TextBuffer()
+
         self.log_view = Gtk.TextView(buffer=self.log_buffer)
         self.log_view.set_editable(False)
+        self.log_view.set_cursor_visible(False)
+        self.log_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
 
-        self.pack_start(self.log_view, True, True, 10)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_hexpand(True)
+        scroll.set_vexpand(True)
+        scroll.add(self.log_view)
+
+        self.pack_start(scroll, True, True, 10)
 
         # -----------------------------
         # BOTÓN INFERIOR IZQUIERDA
@@ -364,16 +372,80 @@ class InstallPage(Gtk.Box):
     # LOG HELPERS
     # -----------------------------
     def log(self, text):
+        GLib.idle_add(self._log, text)
+        
+    def _log(self, text):
         end = self.log_buffer.get_end_iter()
         self.log_buffer.insert(end, text + "\n")
+
+        # 🔥 FORZAR UI UPDATE
+        self.log_view.queue_draw()
+
+        # 🔥 SCROLL AUTOMÁTICO
+        mark = self.log_buffer.create_mark(
+            None,
+            self.log_buffer.get_end_iter(),
+            True
+        )
+        self.log_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
+    
+    # -----------------------------
+    # DESACTIVAR BOTONES
+    # -----------------------------
+    def set_ui_state(self, installing: bool):
+        self.main.installing = installing
+
+        self.install_btn.set_sensitive(not installing)
+        self.back_btn.set_sensitive(not installing)
+        self.close_btn.set_sensitive(not installing)
+
+        if installing:
+            self.spinner.start()
+        else:
+            self.spinner.stop()
+
+
+
+
+    def show_result_popup(self, success, error_msg):
+        self.set_ui_state(False)
+
+        if success:
+            msg = "✔ Instalación completada correctamente"
+            icon = Gtk.MessageType.INFO
+        else:
+            msg = f"✖ Fallo en la instalación\n{error_msg}"
+            icon = Gtk.MessageType.ERROR
+
+        dialog = Gtk.MessageDialog(
+            transient_for=self.main,
+            flags=0,
+            message_type=icon,
+            buttons=Gtk.ButtonsType.OK,
+            text=msg
+        )
+
+        dialog.set_title("Resultado de instalación")
+
+        def on_response(dialog, response):
+            dialog.destroy()
+
+            self.install_btn.set_sensitive(False)
+            self.back_btn.set_sensitive(True)
+            self.close_btn.set_sensitive(True)
+
+        dialog.connect("response", on_response)
+        dialog.show()
+
+
+
+
 
     # -----------------------------
     # INSTALL FLOW
     # -----------------------------
     def install(self):
-        self.install_btn.set_sensitive(False)
-        self.back_btn.set_sensitive(False)
-        self.spinner.start()
+        self.set_ui_state(True)
 
         pkgs = []
         for cb in self.main.package_page.checkboxes.values():
@@ -381,33 +453,52 @@ class InstallPage(Gtk.Box):
                 pkgs.append(cb.get_label().split(" — ")[0])
 
         def worker():
+            GLib.idle_add(self.log, "ENTRO EN WORKER")
+
             try:
-                if "kxstudio-repos" in pkgs:
-                    pkgs.remove("kxstudio-repos")
-                    self.log("Instalando KXStudio repositorio...")
+                GLib.idle_add(self.log, "INSTALANDO PAQUETES...")
 
-                    subprocess.run(
-                        "wget -q https://launchpad.net/~kxstudio-debian/+archive/kxstudio/+files/kxstudio-repos_11.2.0_all.deb && pkexec dpkg -i kxstudio-repos_11.2.0_all.deb",
-                        shell=True
-                    )
+                cmd = ["pkexec", "apt", "install", "-y"] + pkgs
 
-                if pkgs:
-                    self.log("Instalando paquetes...")
-                    subprocess.run(
-                        f"pkexec apt install -y {' '.join(pkgs)}",
-                        shell=True
-                    )
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1
+                )
+
+                GLib.idle_add(self.log, "PROCESO LANZADO")
+
+                # 🔥 lectura en tiempo real
+                for line in process.stdout:
+                    if line:
+                        GLib.idle_add(self.log, line.strip())
+
+                process.stdout.close()
+                process.wait()
+
+                if process.returncode == 0:
+                    GLib.idle_add(self.log, "INSTALACIÓN FINALIZADA")
+                else:
+                    GLib.idle_add(self.log, f"ERROR: código {process.returncode}")
+
+            except Exception as e:
+                GLib.idle_add(self.log, f"ERROR: {str(e)}")
 
             finally:
                 GLib.idle_add(self.finish)
 
+        # 🔥🔥🔥 ESTO ES LO QUE TE FALTABA 🔥🔥🔥
         threading.Thread(target=worker, daemon=True).start()
-
+                
     def finish(self):
+        self.log("Instalación completada ✔")
         self.spinner.stop()
         self.install_btn.set_sensitive(True)
         self.back_btn.set_sensitive(True)
-        self.log("Instalación completada ✔")
+        self.set_ui_state(False)
+        
 
 
 # -----------------------------
