@@ -453,8 +453,6 @@ class InstallPage(Gtk.Box):
                 pkgs.append(cb.get_label().split(" — ")[0])
 
         def worker():
-            GLib.idle_add(self.log, "ENTRO EN WORKER")
-
             try:
                 GLib.idle_add(self.log, "INSTALANDO PAQUETES...")
 
@@ -468,7 +466,6 @@ class InstallPage(Gtk.Box):
                     bufsize=1
                 )
 
-                GLib.idle_add(self.log, "PROCESO LANZADO")
 
                 # 🔥 lectura en tiempo real
                 for line in process.stdout:
@@ -479,7 +476,6 @@ class InstallPage(Gtk.Box):
                 process.wait()
 
                 if process.returncode == 0:
-                    GLib.idle_add(self.log, "INSTALACIÓN FINALIZADA")
                 else:
                     GLib.idle_add(self.log, f"ERROR: código {process.returncode}")
 
