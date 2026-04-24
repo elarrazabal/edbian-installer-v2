@@ -476,6 +476,7 @@ class InstallPage(Gtk.Box):
                 process.wait()
 
                 if process.returncode == 0:
+                    GLib.idle_add(self.log, "INSTALACIÓN FINALIZANDO...")
                 else:
                     GLib.idle_add(self.log, f"ERROR: código {process.returncode}")
 
