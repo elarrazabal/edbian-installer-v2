@@ -3,22 +3,44 @@
     "gdebi",
     "synapse",
     "gparted",
-    "gedit"
+    "gedit",
+    "deja-dup"
   ],
 
   "Multimedia": [
+    "gdebi",
+    "synapse",
+    "gparted",
+    "gedit",
+    "deja-dup"
     "vlc",
     "kodi",
     "obs-studio",
-    "kdenlive"
+    "kdenlive",
+    "vokoscreen",
+    "cheese"
   ],
 
   "Audio": [
+    "gdebi",
+    "synapse",
+    "gparted",
+    "gedit",
+    "deja-dup"	
     "ardour",
     "audacity",
     "lmms",
     "hydrogen",
-    "qjackctl"
+    "qjackctl",
+    "vokoscreen",
+    "cheese",
+    "musescore3",
+    "audacious",
+    "audacity",
+    "guitarix",
+    "rakarrack",
+    "qpwgraph",
+    "kxstudio-repos"
   ],
 
   "Completo": [
@@ -26,6 +48,9 @@
     "synapse",
     "gparted",
     "gedit",
+    "deja-dup"
+    "flatpak",
+    "snapd",
     "krita",
     "blender",
     "inkscape",
@@ -38,6 +63,15 @@
     "audacity",
     "lmms",
     "hydrogen",
-    "qjackctl"
+    "qjackctl",
+    "vokoscreen",
+    "cheese",
+    "musescore3",
+    "audacious",
+    "audacity",
+    "guitarix",
+    "rakarrack",
+    "qpwgraph",
+    "kxstudio-repos"
   ]
 }
