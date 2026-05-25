@@ -1,5 +1,5 @@
 Package: edbian-installer
-Version: 2.0.4
+Version: 1.0.0-10
 Section: utils
 Priority: optional
 Architecture: all
